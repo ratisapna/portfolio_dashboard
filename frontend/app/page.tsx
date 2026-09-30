@@ -44,11 +44,15 @@ function fmt(n: number | null) {
 export default function Home() {
   const [rows, setRows] = useState<Row[]>([]);
   const [err, setErr] = useState('');
+  const [upd, setUpd] = useState('');
 
   useEffect(() => {
     fetch(API)
       .then((r) => r.json())
-      .then(setRows)
+      .then((d) => {
+        setRows(d);
+        setUpd(new Date().toLocaleTimeString());
+      })
       .catch(() => setErr('could not load initial data'));
 
     let sock: WebSocket;
@@ -58,6 +62,7 @@ export default function Home() {
       sock = new WebSocket(WS);
       sock.onmessage = (e) => {
         setRows(JSON.parse(e.data));
+        setUpd(new Date().toLocaleTimeString());
         setErr('');
       };
       sock.onerror = () => setErr('live connection lost, retrying');
@@ -89,41 +94,45 @@ export default function Home() {
   const totGl = totPv - totInv;
 
   return (
-    <main className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Portfolio Dashboard</h1>
-
-      {err && <p className="text-red-600 mb-3">{err}</p>}
-
-      {rows.length === 0 && !err && <p>Loading portfolio...</p>}
-
-      {rows.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="border rounded p-4">
-            <p className="text-sm text-gray-500">Total Investment</p>
-            <p className="text-xl font-semibold">{fmt(totInv)}</p>
-          </div>
-          <div className="border rounded p-4">
-            <p className="text-sm text-gray-500">Total Present Value</p>
-            <p className="text-xl font-semibold">{fmt(totPv)}</p>
-          </div>
-          <div className="border rounded p-4">
-            <p className="text-sm text-gray-500">Total Gain/Loss</p>
-            <p
-              className={
-                'text-xl font-semibold ' +
-                (totGl >= 0 ? 'text-green-600' : 'text-red-600')
-              }
-            >
-              {fmt(totGl)}
-            </p>
-          </div>
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-baseline justify-between mb-6">
+          <h1 className="text-2xl font-bold">Portfolio Dashboard</h1>
+          {upd && <p className="text-xs text-gray-400">Last updated {upd}</p>}
         </div>
-      )}
 
-      {rows.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <div className="border rounded p-4">
-            <p className="font-semibold mb-2">Sector Allocation</p>
+        {err && <p className="text-red-600 mb-3">{err}</p>}
+
+        {rows.length === 0 && !err && <p>Loading portfolio...</p>}
+
+        {rows.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <p className="text-sm text-gray-500">Total Investment</p>
+              <p className="text-xl font-semibold">{fmt(totInv)}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <p className="text-sm text-gray-500">Total Present Value</p>
+              <p className="text-xl font-semibold">{fmt(totPv)}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <p className="text-sm text-gray-500">Total Gain/Loss</p>
+              <p
+                className={
+                  'text-xl font-semibold ' +
+                  (totGl >= 0 ? 'text-green-600' : 'text-red-600')
+                }
+              >
+                {fmt(totGl)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {rows.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <p className="font-semibold mb-2">Sector Allocation</p>
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie data={secData} dataKey="inv" nameKey="sec" outerRadius={90} label>
@@ -135,7 +144,7 @@ export default function Home() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="border rounded p-4">
+          <div className="bg-white rounded-xl shadow-sm p-4">
             <p className="font-semibold mb-2">Investment vs Present Value</p>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={secData}>
@@ -150,24 +159,24 @@ export default function Home() {
             </ResponsiveContainer>
           </div>
         </div>
-      )}
+        )}
 
-      {rows.length > 0 && (
-        <div className="overflow-x-auto border rounded">
-          <table className="w-full text-sm border-collapse min-w-[900px]">
-            <thead>
-              <tr className="bg-gray-100 text-left">
-                <th className="p-2">Particulars</th>
-                <th className="p-2">Purchase Price</th>
-                <th className="p-2">Qty</th>
-                <th className="p-2">Investment</th>
-                <th className="p-2">Portfolio %</th>
-                <th className="p-2">NSE/BSE</th>
-                <th className="p-2">CMP</th>
-                <th className="p-2">Present Value</th>
-                <th className="p-2">Gain/Loss</th>
-                <th className="p-2">P/E Ratio</th>
-                <th className="p-2">Latest Earnings</th>
+        {rows.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
+          <table className="w-full text-sm border-collapse min-w-[950px]">
+            <thead className="sticky top-0 bg-white">
+              <tr className="text-left text-gray-500 border-b">
+                <th className="p-3">Particulars</th>
+                <th className="p-3">Purchase Price</th>
+                <th className="p-3">Qty</th>
+                <th className="p-3">Investment</th>
+                <th className="p-3">Portfolio %</th>
+                <th className="p-3">NSE/BSE</th>
+                <th className="p-3">CMP</th>
+                <th className="p-3">Present Value</th>
+                <th className="p-3">Gain/Loss</th>
+                <th className="p-3">P/E Ratio</th>
+                <th className="p-3">Latest Earnings</th>
               </tr>
             </thead>
             <tbody>
@@ -176,27 +185,39 @@ export default function Home() {
 
                 return (
                   <Fragment key={sec}>
-                    <tr className="bg-gray-200 font-semibold">
-                      <td className="p-2" colSpan={11}>
+                    <tr className="bg-gray-50">
+                      <td className="p-2 px-3 font-semibold text-gray-700" colSpan={11}>
                         {sec}
                       </td>
                     </tr>
 
                     {grp.map((r) => (
-                      <tr key={r.name} className="border-b">
-                        <td className="p-2">{r.name}</td>
-                        <td className="p-2">{fmt(r.buy)}</td>
-                        <td className="p-2">{r.qty}</td>
-                        <td className="p-2">{fmt(r.inv)}</td>
-                        <td className="p-2">{r.pct.toFixed(2)}%</td>
-                        <td className="p-2">
-                          {r.code} ({r.exch})
+                      <tr key={r.name} className="border-b hover:bg-gray-50">
+                        <td className="p-3">{r.name}</td>
+                        <td className="p-3">{fmt(r.buy)}</td>
+                        <td className="p-3">{r.qty}</td>
+                        <td className="p-3">{fmt(r.inv)}</td>
+                        <td className="p-3 w-28">
+                          <div className="flex items-center gap-2">
+                            <span>{r.pct.toFixed(2)}%</span>
+                          </div>
+                          <div className="h-1 bg-gray-100 rounded-full mt-1">
+                            <div
+                              className="h-1 bg-blue-400 rounded-full"
+                              style={{ width: Math.min(r.pct, 100) + '%' }}
+                            />
+                          </div>
                         </td>
-                        <td className="p-2">{fmt(r.cmp)}</td>
-                        <td className="p-2">{fmt(r.pv)}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs">
+                            {r.code} · {r.exch}
+                          </span>
+                        </td>
+                        <td className="p-3">{fmt(r.cmp)}</td>
+                        <td className="p-3">{fmt(r.pv)}</td>
                         <td
                           className={
-                            'p-2 ' +
+                            'p-3 ' +
                             (r.gl === null
                               ? ''
                               : r.gl >= 0
@@ -206,29 +227,29 @@ export default function Home() {
                         >
                           {fmt(r.gl)}
                         </td>
-                        <td className="p-2">{fmt(r.pe)}</td>
-                        <td className="p-2">{fmt(r.eps)}</td>
+                        <td className="p-3">{fmt(r.pe)}</td>
+                        <td className="p-3">{fmt(r.eps)}</td>
                       </tr>
                     ))}
 
-                    <tr className="bg-gray-50 font-medium">
-                      <td className="p-2">{sec} Total</td>
-                      <td className="p-2"></td>
-                      <td className="p-2"></td>
-                      <td className="p-2">{fmt(tInv)}</td>
-                      <td className="p-2"></td>
-                      <td className="p-2"></td>
-                      <td className="p-2"></td>
-                      <td className="p-2">{fmt(tPv)}</td>
+                    <tr className="bg-gray-50 font-medium border-b">
+                      <td className="p-3">{sec} Total</td>
+                      <td className="p-3"></td>
+                      <td className="p-3"></td>
+                      <td className="p-3">{fmt(tInv)}</td>
+                      <td className="p-3"></td>
+                      <td className="p-3"></td>
+                      <td className="p-3"></td>
+                      <td className="p-3">{fmt(tPv)}</td>
                       <td
                         className={
-                          'p-2 ' + (tGl >= 0 ? 'text-green-600' : 'text-red-600')
+                          'p-3 ' + (tGl >= 0 ? 'text-green-600' : 'text-red-600')
                         }
                       >
                         {fmt(tGl)}
                       </td>
-                      <td className="p-2"></td>
-                      <td className="p-2"></td>
+                      <td className="p-3"></td>
+                      <td className="p-3"></td>
                     </tr>
                   </Fragment>
                 );
@@ -236,7 +257,8 @@ export default function Home() {
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </div>
     </main>
   );
 }
