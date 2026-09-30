@@ -1,69 +1,161 @@
-import Image from "next/image";
+'use client';
+
+import { Fragment, useEffect, useState } from 'react';
+
+interface Row {
+  name: string;
+  sec: string;
+  buy: number;
+  qty: number;
+  code: string;
+  exch: string;
+  inv: number;
+  cmp: number | null;
+  pv: number | null;
+  gl: number | null;
+  pe: number | null;
+  eps: number | null;
+  pct: number;
+}
+
+const API = 'http://localhost:4000/api/portfolio';
+const WS = 'ws://localhost:4000';
+
+function fmt(n: number | null) {
+  if (n === null || n === undefined) return 'N/A';
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
 
 export default function Home() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    fetch(API)
+      .then((r) => r.json())
+      .then(setRows)
+      .catch(() => setErr('could not load initial data'));
+
+    let sock: WebSocket;
+    let timer: ReturnType<typeof setTimeout>;
+
+    function connect() {
+      sock = new WebSocket(WS);
+      sock.onmessage = (e) => {
+        setRows(JSON.parse(e.data));
+        setErr('');
+      };
+      sock.onerror = () => setErr('live connection lost, retrying');
+      sock.onclose = () => {
+        timer = setTimeout(connect, 3000);
+      };
+    }
+    connect();
+
+    return () => {
+      clearTimeout(timer);
+      if (sock) sock.close();
+    };
+  }, []);
+
+  const secs = Array.from(new Set(rows.map((r) => r.sec)));
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="p-6 max-w-7xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Portfolio Dashboard</h1>
+
+      {err && <p className="text-red-600 mb-3">{err}</p>}
+
+      {rows.length === 0 && !err && <p>Loading portfolio...</p>}
+
+      {rows.length > 0 && (
+        <div className="overflow-x-auto border rounded">
+          <table className="w-full text-sm border-collapse min-w-[900px]">
+            <thead>
+              <tr className="bg-gray-100 text-left">
+                <th className="p-2">Particulars</th>
+                <th className="p-2">Purchase Price</th>
+                <th className="p-2">Qty</th>
+                <th className="p-2">Investment</th>
+                <th className="p-2">Portfolio %</th>
+                <th className="p-2">NSE/BSE</th>
+                <th className="p-2">CMP</th>
+                <th className="p-2">Present Value</th>
+                <th className="p-2">Gain/Loss</th>
+                <th className="p-2">P/E Ratio</th>
+                <th className="p-2">Latest Earnings</th>
+              </tr>
+            </thead>
+            <tbody>
+              {secs.map((sec) => {
+                const grp = rows.filter((r) => r.sec === sec);
+                const tInv = grp.reduce((a, r) => a + r.inv, 0);
+                const tPv = grp.reduce((a, r) => a + (r.pv ?? 0), 0);
+                const tGl = tPv - tInv;
+
+                return (
+                  <Fragment key={sec}>
+                    <tr className="bg-gray-200 font-semibold">
+                      <td className="p-2" colSpan={11}>
+                        {sec}
+                      </td>
+                    </tr>
+
+                    {grp.map((r) => (
+                      <tr key={r.name} className="border-b">
+                        <td className="p-2">{r.name}</td>
+                        <td className="p-2">{fmt(r.buy)}</td>
+                        <td className="p-2">{r.qty}</td>
+                        <td className="p-2">{fmt(r.inv)}</td>
+                        <td className="p-2">{r.pct.toFixed(2)}%</td>
+                        <td className="p-2">
+                          {r.code} ({r.exch})
+                        </td>
+                        <td className="p-2">{fmt(r.cmp)}</td>
+                        <td className="p-2">{fmt(r.pv)}</td>
+                        <td
+                          className={
+                            'p-2 ' +
+                            (r.gl === null
+                              ? ''
+                              : r.gl >= 0
+                                ? 'text-green-600'
+                                : 'text-red-600')
+                          }
+                        >
+                          {fmt(r.gl)}
+                        </td>
+                        <td className="p-2">{fmt(r.pe)}</td>
+                        <td className="p-2">{fmt(r.eps)}</td>
+                      </tr>
+                    ))}
+
+                    <tr className="bg-gray-50 font-medium">
+                      <td className="p-2">{sec} Total</td>
+                      <td className="p-2"></td>
+                      <td className="p-2"></td>
+                      <td className="p-2">{fmt(tInv)}</td>
+                      <td className="p-2"></td>
+                      <td className="p-2"></td>
+                      <td className="p-2"></td>
+                      <td className="p-2">{fmt(tPv)}</td>
+                      <td
+                        className={
+                          'p-2 ' + (tGl >= 0 ? 'text-green-600' : 'text-red-600')
+                        }
+                      >
+                        {fmt(tGl)}
+                      </td>
+                      <td className="p-2"></td>
+                      <td className="p-2"></td>
+                    </tr>
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      )}
+    </main>
   );
 }
