@@ -48,7 +48,10 @@ export default function Home() {
 
   useEffect(() => {
     fetch(API)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('bad status');
+        return r.json();
+      })
       .then((d) => {
         setRows(d);
         setUpd(new Date().toLocaleTimeString());
@@ -61,9 +64,13 @@ export default function Home() {
     function connect() {
       sock = new WebSocket(WS);
       sock.onmessage = (e) => {
-        setRows(JSON.parse(e.data));
-        setUpd(new Date().toLocaleTimeString());
-        setErr('');
+        try {
+          setRows(JSON.parse(e.data));
+          setUpd(new Date().toLocaleTimeString());
+          setErr('');
+        } catch {
+          setErr('received bad data from server');
+        }
       };
       sock.onerror = () => setErr('live connection lost, retrying');
       sock.onclose = () => {

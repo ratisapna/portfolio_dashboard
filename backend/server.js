@@ -37,7 +37,11 @@ wss.on('connection', (sock) => {
   if (cche.data) sock.send(JSON.stringify(cche.data));
 });
 
+let busy = false;
+
 setInterval(async () => {
+  if (busy) return;
+  busy = true;
   try {
     const rows = await getData();
     cche = { data: rows, time: Date.now() };
@@ -48,4 +52,5 @@ setInterval(async () => {
   } catch (e) {
     console.log('refresh failed', e.message);
   }
+  busy = false;
 }, TTL);
