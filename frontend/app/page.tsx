@@ -1,6 +1,19 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 
 interface Row {
   name: string;
@@ -20,6 +33,8 @@ interface Row {
 
 const API = 'http://localhost:4000/api/portfolio';
 const WS = 'ws://localhost:4000';
+
+const CLRS = ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#2dd4bf'];
 
 function fmt(n: number | null) {
   if (n === null || n === undefined) return 'N/A';
@@ -60,6 +75,19 @@ export default function Home() {
 
   const secs = Array.from(new Set(rows.map((r) => r.sec)));
 
+  const secData = useMemo(() => {
+    return secs.map((sec) => {
+      const grp = rows.filter((r) => r.sec === sec);
+      const inv = grp.reduce((a, r) => a + r.inv, 0);
+      const pv = grp.reduce((a, r) => a + (r.pv ?? 0), 0);
+      return { sec, inv, pv, gl: pv - inv };
+    });
+  }, [rows]);
+
+  const totInv = secData.reduce((a, s) => a + s.inv, 0);
+  const totPv = secData.reduce((a, s) => a + s.pv, 0);
+  const totGl = totPv - totInv;
+
   return (
     <main className="p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Portfolio Dashboard</h1>
@@ -67,6 +95,62 @@ export default function Home() {
       {err && <p className="text-red-600 mb-3">{err}</p>}
 
       {rows.length === 0 && !err && <p>Loading portfolio...</p>}
+
+      {rows.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="border rounded p-4">
+            <p className="text-sm text-gray-500">Total Investment</p>
+            <p className="text-xl font-semibold">{fmt(totInv)}</p>
+          </div>
+          <div className="border rounded p-4">
+            <p className="text-sm text-gray-500">Total Present Value</p>
+            <p className="text-xl font-semibold">{fmt(totPv)}</p>
+          </div>
+          <div className="border rounded p-4">
+            <p className="text-sm text-gray-500">Total Gain/Loss</p>
+            <p
+              className={
+                'text-xl font-semibold ' +
+                (totGl >= 0 ? 'text-green-600' : 'text-red-600')
+              }
+            >
+              {fmt(totGl)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <div className="border rounded p-4">
+            <p className="font-semibold mb-2">Sector Allocation</p>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie data={secData} dataKey="inv" nameKey="sec" outerRadius={90} label>
+                  {secData.map((s, i) => (
+                    <Cell key={s.sec} fill={CLRS[i % CLRS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="border rounded p-4">
+            <p className="font-semibold mb-2">Investment vs Present Value</p>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={secData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="sec" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="inv" fill="#60a5fa" name="Investment" />
+                <Bar dataKey="pv" fill="#34d399" name="Present Value" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {rows.length > 0 && (
         <div className="overflow-x-auto border rounded">
@@ -87,11 +171,8 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {secs.map((sec) => {
+              {secData.map(({ sec, inv: tInv, pv: tPv, gl: tGl }) => {
                 const grp = rows.filter((r) => r.sec === sec);
-                const tInv = grp.reduce((a, r) => a + r.inv, 0);
-                const tPv = grp.reduce((a, r) => a + (r.pv ?? 0), 0);
-                const tGl = tPv - tInv;
 
                 return (
                   <Fragment key={sec}>
