@@ -171,19 +171,19 @@ export default function Home() {
         {rows.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
           <table className="w-full text-sm border-collapse min-w-[950px]">
-            <thead className="sticky top-0 bg-white">
-              <tr className="text-left text-gray-500 border-b">
-                <th className="p-3">Particulars</th>
-                <th className="p-3">Purchase Price</th>
-                <th className="p-3">Qty</th>
-                <th className="p-3">Investment</th>
-                <th className="p-3">Portfolio %</th>
-                <th className="p-3">NSE/BSE</th>
-                <th className="p-3">CMP</th>
-                <th className="p-3">Present Value</th>
-                <th className="p-3">Gain/Loss</th>
-                <th className="p-3">P/E Ratio</th>
-                <th className="p-3">Latest Earnings</th>
+            <thead className="sticky top-0 bg-gray-800">
+              <tr className="text-left text-white">
+                <th className="p-4">Particulars</th>
+                <th className="p-4">Purchase Price</th>
+                <th className="p-4">Qty</th>
+                <th className="p-4">Investment</th>
+                <th className="p-4">Portfolio %</th>
+                <th className="p-4">NSE/BSE</th>
+                <th className="p-4">CMP</th>
+                <th className="p-4">Present Value</th>
+                <th className="p-4">Gain/Loss</th>
+                <th className="p-4">P/E Ratio</th>
+                <th className="p-4">Latest Earnings</th>
               </tr>
             </thead>
             <tbody>
