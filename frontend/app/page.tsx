@@ -103,10 +103,16 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-baseline justify-between mb-6">
+        <div className="flex items-baseline justify-between mb-1">
           <h1 className="text-2xl font-bold">Portfolio Dashboard</h1>
           {upd && <p className="text-xs text-gray-400">Last updated {upd}</p>}
         </div>
+
+        <p className="text-xs text-gray-400 mb-6">
+          Data from Yahoo Finance (unofficial API), refreshed every 15 seconds.
+          Prices may be delayed and a few stocks may show N/A if Yahoo has no
+          data for them.
+        </p>
 
         {err && <p className="text-red-600 mb-3">{err}</p>}
 
