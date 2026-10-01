@@ -193,7 +193,7 @@ export default function Home() {
                 return (
                   <Fragment key={sec}>
                     <tr className="bg-gray-50">
-                      <td className="p-2 px-3 font-semibold text-gray-700" colSpan={11}>
+                      <td className="pt-6 pb-2 px-3 font-semibold text-gray-700" colSpan={11}>
                         {sec}
                       </td>
                     </tr>
@@ -239,7 +239,7 @@ export default function Home() {
                       </tr>
                     ))}
 
-                    <tr className="bg-gray-50 font-medium border-b">
+                    <tr className="bg-gray-50 font-medium border-b-4 border-gray-300">
                       <td className="p-3">{sec} Total</td>
                       <td className="p-3"></td>
                       <td className="p-3"></td>
