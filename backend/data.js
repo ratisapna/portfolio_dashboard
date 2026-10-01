@@ -1,6 +1,35 @@
 const YahooFinance = require('yahoo-finance2').default;
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
+const GBASE = 'https://www.google.com/finance/quote/';
+const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+
+function num(s) {
+  if (!s) return null;
+  const n = parseFloat(s.replace(/[₹,]/g, ''));
+  return isNaN(n) ? null : n;
+}
+
+async function gStat(code, exch) {
+  const ex = exch === 'NSE' ? 'NSE' : 'BOM';
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 8000);
+    const html = await fetch(GBASE + code + ':' + ex, { headers: UA, signal: ctl.signal }).then((r) => r.text());
+    clearTimeout(to);
+    const pairs = [...html.matchAll(/<div class="SwQK7">([^<]*)<\/div><div class="dO6ijd">([^<]*)<\/div>/g)];
+    const pe = pairs.find((p) => p[1] === 'P/E ratio');
+    const eps = pairs.find((p) => p[1] === 'EPS');
+    return { pe: pe ? num(pe[2]) : null, eps: eps ? num(eps[2]) : null };
+  } catch (e) {
+    return { pe: null, eps: null };
+  }
+}
+
+function gAll() {
+  return Promise.all(stks.map((x) => gStat(x.code, x.exch)));
+}
+
 const stks = [
   { name: 'HDFC Bank', sec: 'Financial Sector', buy: 1490, qty: 50, code: 'HDFCBANK', exch: 'NSE', sym: 'HDFCBANK.NS' },
   { name: 'Bajaj Finance', sec: 'Financial Sector', buy: 6466, qty: 15, code: 'BAJFINANCE', exch: 'NSE', sym: 'BAJFINANCE.NS' },
@@ -37,18 +66,21 @@ const stks = [
 
 async function getData() {
   const syms = stks.filter(x => x.sym).map(x => x.sym);
-  const qts = await yf.quote(syms);
+
+  const [qts, gRes] = await Promise.all([yf.quote(syms), gAll()]);
+
   const qMap = {};
   qts.forEach(q => { qMap[q.symbol] = q; });
 
-  const rows = stks.map(x => {
+  const rows = stks.map((x, i) => {
     const q = x.sym ? qMap[x.sym] : null;
+    const g = gRes[i];
     const inv = x.buy * x.qty;
     const cmp = q ? q.regularMarketPrice : null;
     const pv = cmp !== null && cmp !== undefined ? cmp * x.qty : null;
     const gl = pv !== null ? pv - inv : null;
-    const pe = q ? q.trailingPE : null;
-    const eps = q ? q.epsTrailingTwelveMonths : null;
+    const pe = g.pe !== null ? g.pe : (q ? q.trailingPE : null);
+    const eps = g.eps !== null ? g.eps : (q ? q.epsTrailingTwelveMonths : null);
     return { name: x.name, sec: x.sec, buy: x.buy, qty: x.qty, code: x.code, exch: x.exch, inv, cmp, pv, gl, pe, eps };
   });
 

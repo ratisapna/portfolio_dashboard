@@ -7,12 +7,13 @@ Octa Byte AI full stack intern assignment.
 
 - Frontend: Next.js, TypeScript, Tailwind CSS, Recharts
 - Backend: Node.js, Express, ws (websockets)
-- Data source: Yahoo Finance (via the `yahoo-finance2` npm package)
+- Data sources: Yahoo Finance (via the `yahoo-finance2` npm package) for CMP,
+  Google Finance (scraped) for P/E ratio and latest earnings
 
 ## Folder structure
 
 ```
-backend/   Express + websocket server, stock data, yahoo fetch logic
+backend/   Express + websocket server, stock data, yahoo + google fetch logic
 frontend/  Next.js dashboard UI
 ```
 
@@ -30,7 +31,7 @@ npm run dev
 
 Runs on http://localhost:4000. It exposes:
 - `GET /api/portfolio` - current portfolio data (JSON)
-- a websocket on the same port that pushes updated data every 15 seconds
+- a websocket on the same port that pushes updated data every 20 seconds
 
 **Frontend**
 
@@ -52,7 +53,7 @@ comes up (it keeps retrying on its own).
 - Gain is shown in green, loss in red
 - Three summary cards (total investment, total present value, total gain/loss)
 - A sector allocation pie chart and an investment vs present value bar chart
-- Live updates every 15 seconds over a websocket, no page refresh needed
+- Live updates every 20 seconds over a websocket, no page refresh needed
 
 See [TECHNICAL.md](TECHNICAL.md) for the reasoning behind the API and
 architecture choices, and known limitations.

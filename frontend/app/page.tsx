@@ -109,8 +109,9 @@ export default function Home() {
         </div>
 
         <p className="text-xs text-gray-400 mb-6">
-          Data from Yahoo Finance (unofficial API), refreshed every 15 seconds.
-          Prices may be delayed and a few stocks may show N/A if Yahoo has no
+          CMP from Yahoo Finance, P/E ratio and latest earnings from Google
+          Finance (both unofficial APIs), refreshed every 20 seconds. Prices
+          may be delayed and a few stocks may show N/A if a source has no
           data for them.
         </p>
 

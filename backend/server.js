@@ -6,7 +6,7 @@ const { getData } = require('./data');
 const app = express();
 app.use(cors());
 
-const TTL = 15000;
+const TTL = 20000;
 let cche = { data: null, time: 0 };
 
 async function load() {
