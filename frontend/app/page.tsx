@@ -31,7 +31,7 @@ interface Row {
   pct: number;
 }
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
 const API = BASE + '/api/portfolio';
 const WS = BASE.replace('https://', 'wss://').replace('http://', 'ws://');
 
