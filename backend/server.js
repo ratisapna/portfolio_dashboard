@@ -1,29 +1,62 @@
 const express = require('express');
 const cors = require('cors');
 const WebSocket = require('ws');
-const { getData } = require('./data');
+const { fetchYahoo, fetchGoogle, build } = require('./data');
 
 const app = express();
 app.use(cors());
 
-const TTL = 20000;
-let cche = { data: null, time: 0 };
+const Y_TTL = 15000;
+const G_TTL = 60000;
 
-async function load() {
-  const now = Date.now();
-  if (cche.data && now - cche.time < TTL) return cche.data;
-  const rows = await getData();
-  cche = { data: rows, time: now };
-  return rows;
+let yCache = null;
+let gCache = null;
+let yBusy = false;
+let gBusy = false;
+
+function rows() {
+  if (!yCache) return null;
+  return build(yCache, gCache);
+}
+
+function broadcast() {
+  const r = rows();
+  if (!r) return;
+  const msg = JSON.stringify(r);
+  wss.clients.forEach((c) => {
+    if (c.readyState === WebSocket.OPEN) c.send(msg);
+  });
+}
+
+async function refreshYahoo() {
+  if (yBusy) return;
+  yBusy = true;
+  try {
+    yCache = await fetchYahoo();
+    broadcast();
+  } catch (e) {
+    console.log('yahoo refresh failed', e.message);
+  }
+  yBusy = false;
+}
+
+async function refreshGoogle() {
+  if (gBusy) return;
+  gBusy = true;
+  try {
+    gCache = await fetchGoogle();
+    broadcast();
+  } catch (e) {
+    console.log('google refresh failed', e.message);
+  }
+  gBusy = false;
 }
 
 app.get('/api/portfolio', async (req, res) => {
-  try {
-    const rows = await load();
-    res.json(rows);
-  } catch (e) {
-    res.status(500).json({ error: 'failed to load portfolio data' });
-  }
+  if (!yCache) await refreshYahoo();
+  const r = rows();
+  if (!r) return res.status(500).json({ error: 'failed to load portfolio data' });
+  res.json(r);
 });
 
 const PORT = 4000;
@@ -34,23 +67,12 @@ const srv = app.listen(PORT, () => {
 const wss = new WebSocket.Server({ server: srv });
 
 wss.on('connection', (sock) => {
-  if (cche.data) sock.send(JSON.stringify(cche.data));
+  const r = rows();
+  if (r) sock.send(JSON.stringify(r));
 });
 
-let busy = false;
+refreshYahoo();
+refreshGoogle();
 
-setInterval(async () => {
-  if (busy) return;
-  busy = true;
-  try {
-    const rows = await getData();
-    cche = { data: rows, time: Date.now() };
-    const msg = JSON.stringify(rows);
-    wss.clients.forEach((c) => {
-      if (c.readyState === WebSocket.OPEN) c.send(msg);
-    });
-  } catch (e) {
-    console.log('refresh failed', e.message);
-  }
-  busy = false;
-}, TTL);
+setInterval(refreshYahoo, Y_TTL);
+setInterval(refreshGoogle, G_TTL);

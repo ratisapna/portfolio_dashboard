@@ -4,32 +4,6 @@ const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 const GBASE = 'https://www.google.com/finance/quote/';
 const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
 
-function num(s) {
-  if (!s) return null;
-  const n = parseFloat(s.replace(/[₹,]/g, ''));
-  return isNaN(n) ? null : n;
-}
-
-async function gStat(code, exch) {
-  const ex = exch === 'NSE' ? 'NSE' : 'BOM';
-  try {
-    const ctl = new AbortController();
-    const to = setTimeout(() => ctl.abort(), 8000);
-    const html = await fetch(GBASE + code + ':' + ex, { headers: UA, signal: ctl.signal }).then((r) => r.text());
-    clearTimeout(to);
-    const pairs = [...html.matchAll(/<div class="SwQK7">([^<]*)<\/div><div class="dO6ijd">([^<]*)<\/div>/g)];
-    const pe = pairs.find((p) => p[1] === 'P/E ratio');
-    const eps = pairs.find((p) => p[1] === 'EPS');
-    return { pe: pe ? num(pe[2]) : null, eps: eps ? num(eps[2]) : null };
-  } catch (e) {
-    return { pe: null, eps: null };
-  }
-}
-
-function gAll() {
-  return Promise.all(stks.map((x) => gStat(x.code, x.exch)));
-}
-
 const stks = [
   { name: 'HDFC Bank', sec: 'Financial Sector', buy: 1490, qty: 50, code: 'HDFCBANK', exch: 'NSE', sym: 'HDFCBANK.NS' },
   { name: 'Bajaj Finance', sec: 'Financial Sector', buy: 6466, qty: 15, code: 'BAJFINANCE', exch: 'NSE', sym: 'BAJFINANCE.NS' },
@@ -64,17 +38,44 @@ const stks = [
   { name: 'SBI Life', sec: 'Others', buy: 1197, qty: 49, code: 'SBILIFE', exch: 'NSE', sym: 'SBILIFE.NS' },
 ];
 
-async function getData() {
-  const syms = stks.filter(x => x.sym).map(x => x.sym);
+function num(s) {
+  if (!s) return null;
+  const n = parseFloat(s.replace(/[₹,]/g, ''));
+  return isNaN(n) ? null : n;
+}
 
-  const [qts, gRes] = await Promise.all([yf.quote(syms), gAll()]);
+async function gStat(code, exch) {
+  const ex = exch === 'NSE' ? 'NSE' : 'BOM';
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 8000);
+    const html = await fetch(GBASE + code + ':' + ex, { headers: UA, signal: ctl.signal }).then((r) => r.text());
+    clearTimeout(to);
+    const pairs = [...html.matchAll(/<div class="SwQK7">([^<]*)<\/div><div class="dO6ijd">([^<]*)<\/div>/g)];
+    const pe = pairs.find((p) => p[1] === 'P/E ratio');
+    const eps = pairs.find((p) => p[1] === 'EPS');
+    return { pe: pe ? num(pe[2]) : null, eps: eps ? num(eps[2]) : null };
+  } catch (e) {
+    return { pe: null, eps: null };
+  }
+}
 
+async function fetchYahoo() {
+  const syms = stks.filter((x) => x.sym).map((x) => x.sym);
+  const qts = await yf.quote(syms);
   const qMap = {};
-  qts.forEach(q => { qMap[q.symbol] = q; });
+  qts.forEach((q) => { qMap[q.symbol] = q; });
+  return stks.map((x) => (x.sym ? qMap[x.sym] : null));
+}
 
+function fetchGoogle() {
+  return Promise.all(stks.map((x) => gStat(x.code, x.exch)));
+}
+
+function build(yRes, gRes) {
   const rows = stks.map((x, i) => {
-    const q = x.sym ? qMap[x.sym] : null;
-    const g = gRes[i];
+    const q = yRes[i];
+    const g = (gRes && gRes[i]) || { pe: null, eps: null };
     const inv = x.buy * x.qty;
     const cmp = q ? q.regularMarketPrice : null;
     const pv = cmp !== null && cmp !== undefined ? cmp * x.qty : null;
@@ -85,9 +86,9 @@ async function getData() {
   });
 
   const tot = rows.reduce((a, r) => a + r.inv, 0);
-  rows.forEach(r => { r.pct = (r.inv / tot) * 100; });
+  rows.forEach((r) => { r.pct = (r.inv / tot) * 100; });
 
   return rows;
 }
 
-module.exports = { getData };
+module.exports = { fetchYahoo, fetchGoogle, build };

@@ -109,10 +109,10 @@ export default function Home() {
         </div>
 
         <p className="text-xs text-gray-400 mb-6">
-          CMP from Yahoo Finance, P/E ratio and latest earnings from Google
-          Finance (both unofficial APIs), refreshed every 20 seconds. Prices
-          may be delayed and a few stocks may show N/A if a source has no
-          data for them.
+          CMP from Yahoo Finance (updates every 15 seconds), P/E ratio and
+          latest earnings from Google Finance (updates every 60 seconds,
+          since those don&apos;t change intraday). Prices may be delayed and
+          a few stocks may show N/A if a source has no data for them.
         </p>
 
         {err && <p className="text-red-600 mb-3">{err}</p>}

@@ -31,7 +31,8 @@ npm run dev
 
 Runs on http://localhost:4000. It exposes:
 - `GET /api/portfolio` - current portfolio data (JSON)
-- a websocket on the same port that pushes updated data every 20 seconds
+- a websocket on the same port that pushes CMP updates every 15 seconds and
+  P/E ratio / latest earnings updates every 60 seconds
 
 **Frontend**
 
@@ -53,7 +54,8 @@ comes up (it keeps retrying on its own).
 - Gain is shown in green, loss in red
 - Three summary cards (total investment, total present value, total gain/loss)
 - A sector allocation pie chart and an investment vs present value bar chart
-- Live updates every 20 seconds over a websocket, no page refresh needed
+- Live updates over a websocket, no page refresh needed (CMP every 15
+  seconds, P/E ratio and earnings every 60 seconds)
 
 See [TECHNICAL.md](TECHNICAL.md) for the reasoning behind the API and
 architecture choices, and known limitations.

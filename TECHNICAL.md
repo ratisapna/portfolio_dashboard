@@ -51,32 +51,48 @@ left as-is on purpose rather than hidden, as a real example of the "data may
 be inaccurate or unavailable" problem the assignment warns about with
 unofficial APIs.
 
-## Caching, batching and rate limiting
+## Two separate refresh loops, not one
 
-- Yahoo: one batched call for all 26 symbols, not 26 separate calls.
-- Google: 26 concurrent requests (no batch endpoint exists for it), each
-  wrapped with a timeout so one slow response can't stall the whole cycle.
-- The backend keeps the last fully-merged result in memory for 20 seconds.
-  A REST request that arrives while that cache is still fresh is served
-  straight from memory instead of triggering new calls to either API. This
-  keeps the dashboard well under any reasonable rate limit even with
-  multiple browser tabs open, since they all share one server-side refresh.
+The assignment asks for CMP, Present Value and Gain/Loss to update every 15
+seconds. It doesn't ask for P/E ratio or Latest Earnings to update that
+often, and in reality those two don't move intraday anyway (P/E and EPS are
+end-of-day/quarterly figures, not live ticks). So instead of putting Yahoo
+and Google on the same timer, the backend runs two independent ones:
 
-The 26 Google requests together take somewhere between about 4 and 10
-seconds depending on Google's response time, compared to Yahoo's single
-batched call which is near instant. Because of that, the refresh interval is
-20 seconds rather than the 15 seconds mentioned in the assignment, so a full
-cycle always finishes before the next one starts. A `busy` flag also stops a
-second refresh from starting if one is still running.
+- **Yahoo (CMP)**: one batched call for all 26 symbols, refreshed every
+  **15 seconds** exactly as the assignment asks. This call is small and
+  near-instant, so hitting 15 seconds here is easy.
+- **Google (P/E, earnings)**: 26 concurrent requests, since Google has no
+  batch endpoint the way Yahoo does. Each request pulls down a full ~1.4MB
+  page, so all 26 together take somewhere around 4 to 10 seconds depending
+  on Google's response time that moment. Refreshed every **60 seconds**,
+  which is already far more often than P/E or earnings actually change.
+
+Both caches are kept in memory and merged together (`build()` in
+`backend/data.js`) whenever a client asks for data or a broadcast goes out,
+so the table always shows the latest of each independently. A websocket
+push fires after either loop finishes, so CMP updates reach the browser
+every 15 seconds without waiting on Google at all.
+
+Each loop also has its own `busy` flag so a slow Google cycle can't cause
+two Google refreshes to overlap, and can't block the Yahoo loop either,
+since they run independently.
+
+## Caching and rate limiting
+
+A request that arrives between refreshes is served straight from whichever
+cache (Yahoo's, Google's, or both) is currently in memory, instead of
+triggering new calls. Multiple browser tabs all share the same two
+server-side loops rather than each tab polling on its own, which keeps the
+total request volume to either API low regardless of how many tabs are open.
 
 ## Real-time updates: websockets over polling
 
 The assignment allows a simple `setInterval` poll, but also mentions
-websockets as a more efficient option, so that's what I used. The backend
-refreshes the data every 20 seconds and pushes the result to every connected
-client over a websocket, instead of each browser tab polling on its own
-timer. Opening the dashboard in several tabs doesn't multiply the number of
-calls to Yahoo or Google, they all share the same server-side refresh.
+websockets as a more efficient option, so that's what I used. Whichever
+loop (Yahoo or Google) finishes a refresh pushes the newly merged data to
+every connected client over a websocket, instead of each browser tab
+polling on its own timer.
 
 The frontend also does one plain REST fetch to `/api/portfolio` on page
 load, so the table has something to show immediately instead of waiting for
@@ -94,8 +110,8 @@ the first websocket push.
 - If the websocket disconnects, the frontend shows a message and retries the
   connection every 3 seconds on its own, recovering automatically once the
   backend is back.
-- The backend guards against overlapping refresh cycles if one happens to
-  run longer than the 20 second interval.
+- The backend guards against a loop overlapping with itself if one cycle
+  happens to run longer than its own interval.
 
 ## Security
 
