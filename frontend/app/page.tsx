@@ -31,8 +31,9 @@ interface Row {
   pct: number;
 }
 
-const API = 'http://localhost:4000/api/portfolio';
-const WS = 'ws://localhost:4000';
+const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API = BASE + '/api/portfolio';
+const WS = BASE.replace('https://', 'wss://').replace('http://', 'ws://');
 
 const CLRS = ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#2dd4bf'];
 

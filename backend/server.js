@@ -59,7 +59,7 @@ app.get('/api/portfolio', async (req, res) => {
   res.json(r);
 });
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 const srv = app.listen(PORT, () => {
   console.log('server listening on port ' + PORT);
 });

@@ -59,3 +59,11 @@ comes up (it keeps retrying on its own).
 
 See [TECHNICAL.md](TECHNICAL.md) for the reasoning behind the API and
 architecture choices, and known limitations.
+
+## Deployment
+
+Backend goes on Railway, frontend on Vercel. See the steps below.
+
+The frontend reads the backend's URL from `NEXT_PUBLIC_API_URL` (falls back
+to `http://localhost:4000` for local dev), so the Railway URL has to be set
+as an environment variable in Vercel after the backend is deployed.
